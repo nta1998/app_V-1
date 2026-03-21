@@ -19,7 +19,7 @@ class ApartmentViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = Apartment.objects.all()
         project_id = self.request.query_params.get('project_id', None)
-        if project_id is not None:
+        if project_id:
             queryset = queryset.filter(project__id=project_id)
         return queryset
 
@@ -106,7 +106,7 @@ class DealTransactionViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = DealTransaction.objects.all()
         deal_id = self.request.query_params.get('deal_id', None)
-        if deal_id is not None:
+        if deal_id:
             queryset = queryset.filter(deal__id=deal_id)
         return queryset.order_by('-request_date')
 

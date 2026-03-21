@@ -27,6 +27,12 @@ class User(AbstractBaseUser, PermissionsMixin):
         ('apple', 'Apple'),
     )
 
+    STATUS_CHOICES = (
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('blocked', 'Blocked'),
+    )
+
     groups = models.ManyToManyField(
         Group,
         verbose_name='groups',
@@ -51,8 +57,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
     auth_provider = models.CharField(max_length=10, choices=AUTH_PROVIDERS, default='local')
     provider_id = models.CharField(max_length=255, blank=True, null=True)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='approved')
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
 

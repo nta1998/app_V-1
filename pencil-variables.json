@@ -1,0 +1,333 @@
+{
+  "themes": {
+    "mode": [
+      "dark",
+      "light"
+    ]
+  },
+  "variables": {
+    "color.bgDeep": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#0e0d07",
+          "theme": {
+            "mode": "dark"
+          }
+        },
+        {
+          "value": "#f6f2e8",
+          "theme": {
+            "mode": "light"
+          }
+        }
+      ]
+    },
+    "color.bgDark": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#221f10",
+          "theme": {
+            "mode": "dark"
+          }
+        },
+        {
+          "value": "#ede8db",
+          "theme": {
+            "mode": "light"
+          }
+        }
+      ]
+    },
+    "color.surface": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#2a2616",
+          "theme": {
+            "mode": "dark"
+          }
+        },
+        {
+          "value": "#ffffff",
+          "theme": {
+            "mode": "light"
+          }
+        }
+      ]
+    },
+    "color.textWhite": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#ffffff",
+          "theme": {
+            "mode": "dark"
+          }
+        },
+        {
+          "value": "#1a1709",
+          "theme": {
+            "mode": "light"
+          }
+        }
+      ]
+    },
+    "color.textWhite25": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#ffffff66",
+          "theme": {
+            "mode": "dark"
+          }
+        },
+        {
+          "value": "#1a170966",
+          "theme": {
+            "mode": "light"
+          }
+        }
+      ]
+    },
+    "color.textWhite50": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#ffffff80",
+          "theme": {
+            "mode": "dark"
+          }
+        },
+        {
+          "value": "#1a170980",
+          "theme": {
+            "mode": "light"
+          }
+        }
+      ]
+    },
+    "color.textWhite70": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#ffffffB3",
+          "theme": {
+            "mode": "dark"
+          }
+        },
+        {
+          "value": "#1a1709B3",
+          "theme": {
+            "mode": "light"
+          }
+        }
+      ]
+    },
+    "color.glass20": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#ffffff0D",
+          "theme": {
+            "mode": "dark"
+          }
+        },
+        {
+          "value": "#00000010",
+          "theme": {
+            "mode": "light"
+          }
+        }
+      ]
+    },
+    "color.glass60": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#ffffff1A",
+          "theme": {
+            "mode": "dark"
+          }
+        },
+        {
+          "value": "#0000001A",
+          "theme": {
+            "mode": "light"
+          }
+        }
+      ]
+    },
+    "color.glass100": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#ffffff2E",
+          "theme": {
+            "mode": "dark"
+          }
+        },
+        {
+          "value": "#00000030",
+          "theme": {
+            "mode": "light"
+          }
+        }
+      ]
+    },
+    "color.borderLight": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#ffffff14",
+          "theme": {
+            "mode": "dark"
+          }
+        },
+        {
+          "value": "#1f1b1022",
+          "theme": {
+            "mode": "light"
+          }
+        }
+      ]
+    },
+    "color.borderMedium": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#ffffff2E",
+          "theme": {
+            "mode": "dark"
+          }
+        },
+        {
+          "value": "#1f1b1044",
+          "theme": {
+            "mode": "light"
+          }
+        }
+      ]
+    },
+    "color.shadowDeep": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#0000008C",
+          "theme": {
+            "mode": "dark"
+          }
+        },
+        {
+          "value": "#00000026",
+          "theme": {
+            "mode": "light"
+          }
+        }
+      ]
+    },
+    "color.primary": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#c8a455",
+          "theme": {
+            "mode": "dark"
+          }
+        },
+        {
+          "value": "#c8a455",
+          "theme": {
+            "mode": "light"
+          }
+        }
+      ]
+    },
+    "color.primaryDim": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#c8a45526",
+          "theme": {
+            "mode": "dark"
+          }
+        },
+        {
+          "value": "#c8a45526",
+          "theme": {
+            "mode": "light"
+          }
+        }
+      ]
+    },
+    "color.primaryGlow": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#c8a45559",
+          "theme": {
+            "mode": "dark"
+          }
+        },
+        {
+          "value": "#c8a45559",
+          "theme": {
+            "mode": "light"
+          }
+        }
+      ]
+    },
+    "color.borderGold": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#c8a4554D",
+          "theme": {
+            "mode": "dark"
+          }
+        },
+        {
+          "value": "#c8a4554D",
+          "theme": {
+            "mode": "light"
+          }
+        }
+      ]
+    },
+    "color.success": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#34d399",
+          "theme": {
+            "mode": "dark"
+          }
+        },
+        {
+          "value": "#34d399",
+          "theme": {
+            "mode": "light"
+          }
+        }
+      ]
+    },
+    "color.error": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#ef4444",
+          "theme": {
+            "mode": "dark"
+          }
+        },
+        {
+          "value": "#ef4444",
+          "theme": {
+            "mode": "light"
+          }
+        }
+      ]
+    }
+  }
+}
