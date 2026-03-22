@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Project, Apartment, Deal, DealDocument, DealTransaction, Notifications, UserFavorites, ApartmentDocument, ActivityLog, ProjectDocument
+from .models import Project, Apartment, Deal, DealDocument, DealTransaction, Notifications, UserFavorites, ApartmentDocument, ActivityLog, ProjectDocument, Payment, DealTeamMember
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
@@ -74,11 +74,25 @@ class NotificationsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Notifications
-        fields = ['id', 'user', 'user_id', 'title', 'message', 'is_read', 'created_at']
+        fields = ['id', 'user', 'user_id', 'title', 'message', 'is_read', 'type', 'deal', 'created_at']
 
 class DealDocumentSerializer(serializers.ModelSerializer):
     class Meta:
         model = DealDocument
+        fields = [
+            'id', 'deal', 'filename', 'file', 'file_type',
+            'signing_status', 'signed_file', 'signature_image',
+            'signed_at', 'uploaded_by', 'uploaded_at'
+        ]
+
+class PaymentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Payment
+        fields = '__all__'
+
+class DealTeamMemberSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DealTeamMember
         fields = '__all__'
 
 class UserSerializer(serializers.ModelSerializer):
@@ -106,6 +120,8 @@ class DealTransactionSerializer(serializers.ModelSerializer):
 class DealSerializer(serializers.ModelSerializer):
     documents = DealDocumentSerializer(many=True, read_only=True)
     transactions = DealTransactionSerializer(many=True, read_only=True)
+    payments = PaymentSerializer(many=True, read_only=True)
+    team_members = DealTeamMemberSerializer(many=True, read_only=True)
     apartment = ApartmentSerializer(read_only=True)
     apartment_id = serializers.PrimaryKeyRelatedField(queryset=Apartment.objects.all(), source='apartment', write_only=True)
     user = UserSerializer(read_only=True)
