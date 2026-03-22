@@ -93,6 +93,14 @@ class Notifications(models.Model):
     title = models.CharField(max_length=255)
     message = models.TextField()
     is_read = models.BooleanField(default=False)
+    TYPE_CHOICES = (
+        ('DOCUMENT', 'Document'),
+        ('PAYMENT', 'Payment'),
+        ('STAGE', 'Stage'),
+        ('GENERAL', 'General'),
+    )
+    type = models.CharField(max_length=10, choices=TYPE_CHOICES, default='GENERAL')
+    deal = models.ForeignKey('Deal', on_delete=models.SET_NULL, null=True, blank=True, related_name='notifications')
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -109,6 +117,13 @@ class Deal(models.Model):
     apartment = models.ForeignKey(Apartment, on_delete=models.PROTECT, related_name='deals')
     project = models.ForeignKey(Project, on_delete=models.PROTECT, related_name='deals', null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Active')
+    STAGE_CHOICES = (
+        ('ATTACHMENT', 'הצמדה'),
+        ('CONTRACT', 'חוזה'),
+        ('SIGNING', 'חתימה'),
+        ('CLOSING', 'סגירה'),
+    )
+    stage = models.CharField(max_length=20, choices=STAGE_CHOICES, default='ATTACHMENT')
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -129,6 +144,21 @@ class DealDocument(models.Model):
     file = models.FileField(upload_to='deal_documents/', null=True, blank=True)
     file_type = models.CharField(max_length=20, choices=FILE_TYPE_CHOICES, default='OTHER')
     uploaded_at = models.DateTimeField(auto_now_add=True)
+    SIGNING_STATUS_CHOICES = (
+        ('NONE', 'No signature required'),
+        ('PENDING', 'Pending signature'),
+        ('SIGNED', 'Signed'),
+        ('APPROVED', 'Approved'),
+        ('REJECTED', 'Rejected'),
+    )
+    signing_status = models.CharField(max_length=10, choices=SIGNING_STATUS_CHOICES, default='NONE')
+    signed_file = models.FileField(upload_to='signed_documents/', null=True, blank=True)
+    signature_image = models.FileField(upload_to='signatures/', null=True, blank=True)
+    signed_at = models.DateTimeField(null=True, blank=True)
+    uploaded_by = models.ForeignKey(
+        'accounts.User', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='uploaded_documents'
+    )
 
     def __str__(self):
         return f"{self.filename} ({self.get_file_type_display()})"
@@ -136,11 +166,10 @@ class DealDocument(models.Model):
 
 class DealTransaction(models.Model):
     STAGE_CHOICES = (
-        ('INITIAL', 'התחלתי'),
-        ('IN_PROGRESS', 'בתהליך'),
-        ('PENDING', 'ממתין'),
-        ('COMPLETED', 'הושלם'),
-        ('CANCELLED', 'בוטל'),
+        ('ATTACHMENT', 'הצמדה'),
+        ('CONTRACT', 'חוזה'),
+        ('SIGNING', 'חתימה'),
+        ('CLOSING', 'סגירה'),
     )
 
     STATUS_CHOICES = (
@@ -151,7 +180,7 @@ class DealTransaction(models.Model):
 
     deal = models.ForeignKey(Deal, on_delete=models.CASCADE, related_name='transactions')
     document = models.ForeignKey(DealDocument, on_delete=models.SET_NULL, null=True, blank=True, related_name='transactions')
-    stage = models.CharField(max_length=20, choices=STAGE_CHOICES, default='INITIAL')
+    stage = models.CharField(max_length=20, choices=STAGE_CHOICES, default='ATTACHMENT')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='WAITING_CLIENT')
     request_date = models.DateTimeField(auto_now_add=True)
     completion_date = models.DateTimeField(null=True, blank=True)
@@ -199,3 +228,40 @@ class ProjectDocument(models.Model):
 
     def __str__(self):
         return f"{self.title} ({self.project.project_address})"
+
+
+class Payment(models.Model):
+    STATUS_CHOICES = (
+        ('upcoming', 'Upcoming'),
+        ('pending', 'Pending'),
+        ('paid', 'Paid'),
+    )
+    deal = models.ForeignKey(Deal, on_delete=models.CASCADE, related_name='payments')
+    payment_number = models.IntegerField()
+    due_date = models.DateField()
+    amount = models.DecimalField(max_digits=15, decimal_places=2)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='upcoming')
+    description = models.CharField(max_length=255, blank=True)
+    paid_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['due_date']
+
+    def __str__(self):
+        return f"Payment {self.payment_number} - Deal {self.deal.id}"
+
+
+class DealTeamMember(models.Model):
+    ROLE_CHOICES = (
+        ('DEAL_MANAGER', 'Deal Manager'),
+        ('LAWYER', 'Lawyer'),
+    )
+    deal = models.ForeignKey(Deal, on_delete=models.CASCADE, related_name='team_members')
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES)
+    name = models.CharField(max_length=255)
+    phone = models.CharField(max_length=50)
+    email = models.EmailField(blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.get_role_display()} - {self.name}"

@@ -9,7 +9,8 @@ from rest_framework import status
 
 from .models import (
     Project, Apartment, ApartmentDocument, Deal, DealDocument,
-    DealTransaction, Notifications, UserFavorites, ActivityLog, ProjectDocument
+    DealTransaction, Notifications, UserFavorites, ActivityLog, ProjectDocument,
+    Payment, DealTeamMember
 )
 
 User = get_user_model()
@@ -135,13 +136,13 @@ class DealTransactionModelTests(TestCase):
 
     def test_create_transaction(self):
         tx = DealTransaction.objects.create(
-            deal=self.deal, stage='IN_PROGRESS', status='WAITING_CLIENT'
+            deal=self.deal, stage='CONTRACT', status='WAITING_CLIENT'
         )
-        self.assertIn('בתהליך', str(tx))
+        self.assertIn('חוזה', str(tx))
 
     def test_default_values(self):
         tx = DealTransaction.objects.create(deal=self.deal)
-        self.assertEqual(tx.stage, 'INITIAL')
+        self.assertEqual(tx.stage, 'ATTACHMENT')
         self.assertEqual(tx.status, 'WAITING_CLIENT')
 
 
@@ -485,7 +486,7 @@ class DealTransactionAPITests(BaseAPITestCase):
     def test_create_transaction(self):
         response = self.client.post('/api/deal-transactions/', {
             'deal_id': self.deal.id,
-            'stage': 'IN_PROGRESS',
+            'stage': 'CONTRACT',
             'status': 'WAITING_CLIENT',
             'description': 'Processing documents'
         })
@@ -493,7 +494,7 @@ class DealTransactionAPITests(BaseAPITestCase):
 
     def test_filter_by_deal_id(self):
         DealTransaction.objects.create(
-            deal=self.deal, stage='INITIAL', status='WAITING_CLIENT'
+            deal=self.deal, stage='ATTACHMENT', status='WAITING_CLIENT'
         )
         response = self.client.get(f'/api/deal-transactions/?deal_id={self.deal.id}')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -570,7 +571,7 @@ class SignalTests(TestCase):
         )
         initial_count = ActivityLog.objects.count()
         DealTransaction.objects.create(
-            deal=deal, stage='IN_PROGRESS', status='WAITING_CLIENT'
+            deal=deal, stage='CONTRACT', status='WAITING_CLIENT'
         )
         self.assertEqual(ActivityLog.objects.count(), initial_count + 1)
         log = ActivityLog.objects.latest('created_at')
@@ -581,7 +582,7 @@ class SignalTests(TestCase):
             user=self.user, apartment=self.apartment, project=self.project
         )
         tx = DealTransaction.objects.create(
-            deal=deal, stage='IN_PROGRESS', status='WAITING_CLIENT'
+            deal=deal, stage='CONTRACT', status='WAITING_CLIENT'
         )
         initial_count = ActivityLog.objects.count()
         tx.status = 'DONE'
@@ -589,3 +590,200 @@ class SignalTests(TestCase):
         self.assertEqual(ActivityLog.objects.count(), initial_count + 1)
         log = ActivityLog.objects.latest('created_at')
         self.assertIn('הושלמה', log.description)
+
+
+# ========================================================================
+# NEW MODEL TESTS (Tasks 1-6)
+# ========================================================================
+
+class DealStageTests(TestCase):
+    """Tests for Task 1: Deal stage field and Task 2: DealTransaction stage choices."""
+
+    @patch('core.models.Nominatim')
+    def setUp(self, mock_nominatim):
+        mock_nominatim.return_value.geocode.return_value = None
+        self.user = User.objects.create_user(
+            email='stage@example.com', password='testpass', full_name='Stage User'
+        )
+        self.project = Project.objects.create(project_address='Stage City')
+        self.apartment = Apartment.objects.create(project=self.project, price=Decimal('1000000'))
+
+    def test_deal_default_stage(self):
+        deal = Deal.objects.create(
+            user=self.user, apartment=self.apartment, project=self.project
+        )
+        self.assertEqual(deal.stage, 'ATTACHMENT')
+
+    def test_deal_stage_can_be_changed(self):
+        deal = Deal.objects.create(
+            user=self.user, apartment=self.apartment, project=self.project
+        )
+        deal.stage = 'CONTRACT'
+        deal.save()
+        deal.refresh_from_db()
+        self.assertEqual(deal.stage, 'CONTRACT')
+
+        deal.stage = 'SIGNING'
+        deal.save()
+        deal.refresh_from_db()
+        self.assertEqual(deal.stage, 'SIGNING')
+
+        deal.stage = 'CLOSING'
+        deal.save()
+        deal.refresh_from_db()
+        self.assertEqual(deal.stage, 'CLOSING')
+
+    def test_deal_transaction_stage_choices_match_deal(self):
+        deal_stages = {choice[0] for choice in Deal.STAGE_CHOICES}
+        transaction_stages = {choice[0] for choice in DealTransaction.STAGE_CHOICES}
+        self.assertEqual(deal_stages, transaction_stages)
+
+
+class DealDocumentSigningTests(TestCase):
+    """Tests for Task 3: DealDocument signing fields."""
+
+    @patch('core.models.Nominatim')
+    def setUp(self, mock_nominatim):
+        mock_nominatim.return_value.geocode.return_value = None
+        self.user = User.objects.create_user(
+            email='signing@example.com', password='testpass', full_name='Signing User'
+        )
+        self.project = Project.objects.create(project_address='Signing City')
+        self.apartment = Apartment.objects.create(project=self.project)
+        self.deal = Deal.objects.create(
+            user=self.user, apartment=self.apartment, project=self.project
+        )
+
+    def test_default_signing_status(self):
+        doc = DealDocument.objects.create(
+            deal=self.deal, filename='test.pdf', file_type='CONTRACT'
+        )
+        self.assertEqual(doc.signing_status, 'NONE')
+
+    def test_uploaded_by_fk(self):
+        doc = DealDocument.objects.create(
+            deal=self.deal, filename='test.pdf', file_type='CONTRACT',
+            uploaded_by=self.user
+        )
+        self.assertEqual(doc.uploaded_by, self.user)
+
+    def test_uploaded_by_nullable(self):
+        doc = DealDocument.objects.create(
+            deal=self.deal, filename='test.pdf', file_type='CONTRACT'
+        )
+        self.assertIsNone(doc.uploaded_by)
+
+
+class NotificationsTypeTests(TestCase):
+    """Tests for Task 4: Notifications type and deal fields."""
+
+    @patch('core.models.Nominatim')
+    def setUp(self, mock_nominatim):
+        mock_nominatim.return_value.geocode.return_value = None
+        self.user = User.objects.create_user(
+            email='notiftype@example.com', password='testpass', full_name='Notif Type User'
+        )
+        self.project = Project.objects.create(project_address='Notif City')
+        self.apartment = Apartment.objects.create(project=self.project)
+        self.deal = Deal.objects.create(
+            user=self.user, apartment=self.apartment, project=self.project
+        )
+
+    def test_default_type(self):
+        notif = Notifications.objects.create(
+            user=self.user, title='Test', message='msg'
+        )
+        self.assertEqual(notif.type, 'GENERAL')
+
+    def test_deal_fk_nullable(self):
+        notif = Notifications.objects.create(
+            user=self.user, title='Test', message='msg'
+        )
+        self.assertIsNone(notif.deal)
+
+    def test_deal_fk_set(self):
+        notif = Notifications.objects.create(
+            user=self.user, title='Test', message='msg', deal=self.deal
+        )
+        self.assertEqual(notif.deal, self.deal)
+
+
+class PaymentModelTests(TestCase):
+    """Tests for Task 5: Payment model."""
+
+    @patch('core.models.Nominatim')
+    def setUp(self, mock_nominatim):
+        mock_nominatim.return_value.geocode.return_value = None
+        self.user = User.objects.create_user(
+            email='payment@example.com', password='testpass', full_name='Payment User'
+        )
+        self.project = Project.objects.create(project_address='Payment City')
+        self.apartment = Apartment.objects.create(project=self.project)
+        self.deal = Deal.objects.create(
+            user=self.user, apartment=self.apartment, project=self.project
+        )
+
+    def test_create_payment(self):
+        from datetime import date
+        payment = Payment.objects.create(
+            deal=self.deal, payment_number=1,
+            due_date=date(2026, 6, 1), amount=Decimal('50000.00')
+        )
+        self.assertEqual(payment.status, 'upcoming')
+        self.assertIn('Payment 1', str(payment))
+
+    def test_ordering_by_due_date(self):
+        from datetime import date
+        Payment.objects.create(
+            deal=self.deal, payment_number=2,
+            due_date=date(2026, 8, 1), amount=Decimal('50000.00')
+        )
+        Payment.objects.create(
+            deal=self.deal, payment_number=1,
+            due_date=date(2026, 6, 1), amount=Decimal('50000.00')
+        )
+        Payment.objects.create(
+            deal=self.deal, payment_number=3,
+            due_date=date(2026, 10, 1), amount=Decimal('50000.00')
+        )
+        payments = Payment.objects.all()
+        self.assertEqual(payments[0].payment_number, 1)
+        self.assertEqual(payments[1].payment_number, 2)
+        self.assertEqual(payments[2].payment_number, 3)
+
+
+class DealTeamMemberModelTests(TestCase):
+    """Tests for Task 6: DealTeamMember model."""
+
+    @patch('core.models.Nominatim')
+    def setUp(self, mock_nominatim):
+        mock_nominatim.return_value.geocode.return_value = None
+        self.user = User.objects.create_user(
+            email='team@example.com', password='testpass', full_name='Team User'
+        )
+        self.project = Project.objects.create(project_address='Team City')
+        self.apartment = Apartment.objects.create(project=self.project)
+        self.deal = Deal.objects.create(
+            user=self.user, apartment=self.apartment, project=self.project
+        )
+
+    def test_create_deal_manager(self):
+        member = DealTeamMember.objects.create(
+            deal=self.deal, role='DEAL_MANAGER',
+            name='John Doe', phone='050-1234567'
+        )
+        self.assertIn('Deal Manager', str(member))
+        self.assertIn('John Doe', str(member))
+
+    def test_create_lawyer(self):
+        member = DealTeamMember.objects.create(
+            deal=self.deal, role='LAWYER',
+            name='Jane Smith', phone='050-7654321',
+            email='jane@law.com'
+        )
+        self.assertEqual(member.role, 'LAWYER')
+        self.assertEqual(member.email, 'jane@law.com')
+
+    def test_role_choices(self):
+        roles = {choice[0] for choice in DealTeamMember.ROLE_CHOICES}
+        self.assertEqual(roles, {'DEAL_MANAGER', 'LAWYER'})
