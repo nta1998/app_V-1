@@ -787,3 +787,152 @@ class DealTeamMemberModelTests(TestCase):
     def test_role_choices(self):
         roles = {choice[0] for choice in DealTeamMember.ROLE_CHOICES}
         self.assertEqual(roles, {'DEAL_MANAGER', 'LAWYER'})
+
+
+# ========================================================================
+# VIEWSET API TESTS (Tasks 8-11)
+# ========================================================================
+
+from rest_framework.test import APITestCase
+from rest_framework.authtoken.models import Token
+
+
+class DealDocumentAPITest(APITestCase):
+    def setUp(self):
+        self.admin = User.objects.create_user(email='admin-doc@test.com', password='pass123')
+        self.admin.is_staff = True
+        self.admin.save()
+        self.client_user = User.objects.create_user(email='client-doc@test.com', password='pass123')
+        self.project = Project.objects.create(project_address='Doc API Test Address')
+        self.apartment = Apartment.objects.create(project=self.project, price=500000)
+        self.deal = Deal.objects.create(user=self.client_user, apartment=self.apartment, project=self.project)
+        self.doc = DealDocument.objects.create(deal=self.deal, filename='contract.pdf', signing_status='PENDING')
+        self.admin_token = Token.objects.create(user=self.admin)
+        self.client_token = Token.objects.create(user=self.client_user)
+
+    def test_client_can_sign_own_document(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.client_token.key}')
+        response = self.client.post(f'/api/deal-documents/{self.doc.id}/sign/')
+        self.assertEqual(response.status_code, 200)
+        self.doc.refresh_from_db()
+        self.assertEqual(self.doc.signing_status, 'SIGNED')
+
+    def test_client_cannot_sign_others_document(self):
+        other_user = User.objects.create_user(email='other-doc@test.com', password='pass123')
+        other_token = Token.objects.create(user=other_user)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {other_token.key}')
+        response = self.client.post(f'/api/deal-documents/{self.doc.id}/sign/')
+        self.assertEqual(response.status_code, 403)
+
+    def test_admin_can_approve_document(self):
+        self.doc.signing_status = 'SIGNED'
+        self.doc.save()
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.admin_token.key}')
+        response = self.client.post(f'/api/deal-documents/{self.doc.id}/approve/')
+        self.assertEqual(response.status_code, 200)
+        self.doc.refresh_from_db()
+        self.assertEqual(self.doc.signing_status, 'APPROVED')
+
+    def test_admin_can_reject_document(self):
+        self.doc.signing_status = 'SIGNED'
+        self.doc.save()
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.admin_token.key}')
+        response = self.client.post(f'/api/deal-documents/{self.doc.id}/reject/')
+        self.assertEqual(response.status_code, 200)
+        self.doc.refresh_from_db()
+        self.assertEqual(self.doc.signing_status, 'REJECTED')
+
+    def test_non_admin_cannot_approve(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.client_token.key}')
+        response = self.client.post(f'/api/deal-documents/{self.doc.id}/approve/')
+        self.assertEqual(response.status_code, 403)
+
+    def test_approve_advances_deal_stage(self):
+        self.doc.signing_status = 'SIGNED'
+        self.doc.save()
+        self.deal.stage = 'ATTACHMENT'
+        self.deal.save()
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.admin_token.key}')
+        self.client.post(f'/api/deal-documents/{self.doc.id}/approve/')
+        self.deal.refresh_from_db()
+        self.assertEqual(self.deal.stage, 'CONTRACT')
+
+    def test_list_documents_by_deal_id(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.client_token.key}')
+        response = self.client.get(f'/api/deal-documents/?deal_id={self.deal.id}')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 1)
+
+
+class PaymentAPITest(APITestCase):
+    def setUp(self):
+        self.admin = User.objects.create_user(email='admin-pay@test.com', password='pass123')
+        self.admin.is_staff = True
+        self.admin.save()
+        self.project = Project.objects.create(project_address='Pay API Test Address')
+        self.apartment = Apartment.objects.create(project=self.project, price=1000000)
+        self.deal = Deal.objects.create(user=self.admin, apartment=self.apartment, project=self.project)
+        self.token = Token.objects.create(user=self.admin)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token.key}')
+
+    def test_create_payment(self):
+        response = self.client.post('/api/payments/', {
+            'deal': self.deal.id,
+            'payment_number': 1,
+            'due_date': '2026-06-01',
+            'amount': '250000.00',
+            'description': 'תשלום ראשון',
+        })
+        self.assertEqual(response.status_code, 201)
+
+    def test_list_payments_by_deal(self):
+        Payment.objects.create(deal=self.deal, payment_number=1, due_date='2026-06-01', amount=250000)
+        response = self.client.get(f'/api/payments/?deal_id={self.deal.id}')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 1)
+
+
+class DealTeamAPITest(APITestCase):
+    def setUp(self):
+        self.admin = User.objects.create_user(email='admin-team@test.com', password='pass123')
+        self.admin.is_staff = True
+        self.admin.save()
+        self.project = Project.objects.create(project_address='Team API Test Address')
+        self.apartment = Apartment.objects.create(project=self.project, price=500000)
+        self.deal = Deal.objects.create(user=self.admin, apartment=self.apartment, project=self.project)
+        self.token = Token.objects.create(user=self.admin)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token.key}')
+
+    def test_add_team_member(self):
+        response = self.client.post('/api/deal-team/', {
+            'deal': self.deal.id,
+            'role': 'LAWYER',
+            'name': 'אבי כהן',
+            'phone': '050-1234567',
+            'email': 'avi@law.com',
+        })
+        self.assertEqual(response.status_code, 201)
+
+    def test_list_team_by_deal(self):
+        DealTeamMember.objects.create(deal=self.deal, role='DEAL_MANAGER', name='דני', phone='050-9876543')
+        response = self.client.get(f'/api/deal-team/?deal_id={self.deal.id}')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 1)
+
+
+class DealProgressAPITest(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(email='progress@test.com', password='pass123')
+        self.project = Project.objects.create(project_address='Progress Test Address')
+        self.apartment = Apartment.objects.create(project=self.project, price=500000)
+        self.deal = Deal.objects.create(user=self.user, apartment=self.apartment, project=self.project)
+        self.token = Token.objects.create(user=self.user)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token.key}')
+
+    def test_update_progress_changes_stage(self):
+        response = self.client.post(f'/api/deals/{self.deal.id}/progress/', {
+            'current_stage': 'CONTRACT',
+        }, format='json')
+        self.assertEqual(response.status_code, 200)
+        self.deal.refresh_from_db()
+        self.assertEqual(self.deal.stage, 'CONTRACT')
