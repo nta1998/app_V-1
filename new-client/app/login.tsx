@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   Platform,
+  TextInput,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -19,8 +20,10 @@ export default function LoginScreen() {
   const colors = DarkColors;
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
-  const [loading, setLoading] = useState<'google' | 'apple' | null>(null);
+  const [loading, setLoading] = useState<'google' | 'apple' | 'test' | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [testEmail, setTestEmail] = useState('test@example.com');
+  const [testName, setTestName] = useState('משתמש בדיקה');
 
   const handleSocialLogin = async (provider: 'google' | 'apple') => {
     setError(null);
@@ -28,8 +31,25 @@ export default function LoginScreen() {
     try {
       // TODO: Replace with real expo-auth-session flow
       // For now, using simplified flow — backend accepts email directly
-      // Real implementation will pass id_token from Google/Apple
       await socialLogin(provider, `test.${provider}@example.com`, 'משתמש בדיקה');
+    } catch (err) {
+      if (err instanceof NetworkError) setError('אין חיבור לאינטרנט');
+      else if (err instanceof TimeoutError) setError('השרת לא מגיב — נסה שוב');
+      else if (err instanceof ApiError && err.status === 403) setError('החשבון חסום. פנה לתמיכה.');
+      else if (err instanceof ApiError && err.isServer) setError('שגיאת שרת — נסה שוב מאוחר יותר');
+      else setError('ההתחברות נכשלה — נסה שוב');
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const handleTestLogin = async () => {
+    const email = testEmail.trim().toLowerCase();
+    if (!email) { setError('הכנס אימייל'); return; }
+    setError(null);
+    setLoading('test');
+    try {
+      await socialLogin('google', email, testName.trim() || 'משתמש בדיקה');
     } catch (err) {
       if (err instanceof NetworkError) setError('אין חיבור לאינטרנט');
       else if (err instanceof TimeoutError) setError('השרת לא מגיב — נסה שוב');
@@ -105,6 +125,51 @@ export default function LoginScreen() {
                   )}
                 </TouchableOpacity>
               )}
+            </View>
+
+            {/* Test SSO Login */}
+            <View style={styles.testSection}>
+              <View style={styles.testDivider}>
+                <View style={styles.testDividerLine} />
+                <Text style={styles.testDividerText}>כניסת בדיקה</Text>
+                <View style={styles.testDividerLine} />
+              </View>
+
+              <TextInput
+                style={styles.testInput}
+                value={testEmail}
+                onChangeText={setTestEmail}
+                placeholder="אימייל לבדיקה"
+                placeholderTextColor={colors.textMuted}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                textAlign="right"
+              />
+              <TextInput
+                style={styles.testInput}
+                value={testName}
+                onChangeText={setTestName}
+                placeholder="שם מלא (אופציונלי)"
+                placeholderTextColor={colors.textMuted}
+                textAlign="right"
+              />
+              <TouchableOpacity
+                style={[styles.socialButton, styles.testButton]}
+                onPress={handleTestLogin}
+                disabled={loading !== null}
+                activeOpacity={0.85}
+              >
+                {loading === 'test' ? (
+                  <ActivityIndicator color={colors.textWhite} />
+                ) : (
+                  <>
+                    <View style={styles.socialIconContainer}>
+                      <Ionicons name="flask" size={20} color="#FFD700" />
+                    </View>
+                    <Text style={styles.socialButtonText}>כניסה לבדיקה</Text>
+                  </>
+                )}
+              </TouchableOpacity>
             </View>
 
             {/* Error */}
@@ -212,6 +277,45 @@ const makeStyles = (colors: ThemeColors) =>
       fontFamily: Fonts.heebo.medium,
       fontSize: 16,
       color: colors.textWhite,
+    },
+
+    // Test SSO
+    testSection: {
+      width: '100%',
+      marginTop: 20,
+    },
+    testDivider: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      marginBottom: 14,
+    },
+    testDividerLine: {
+      flex: 1,
+      height: 1,
+      backgroundColor: colors.borderMedium,
+    },
+    testDividerText: {
+      fontFamily: Fonts.heebo.regular,
+      fontSize: 12,
+      color: colors.textMuted,
+    },
+    testInput: {
+      backgroundColor: colors.glass20,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.borderMedium,
+      height: 46,
+      paddingHorizontal: 16,
+      fontFamily: Fonts.heebo.regular,
+      fontSize: 14,
+      color: colors.textWhite,
+      marginBottom: 10,
+      width: '100%',
+    },
+    testButton: {
+      backgroundColor: '#2a2500',
+      borderColor: '#FFD70040',
     },
 
     // Error

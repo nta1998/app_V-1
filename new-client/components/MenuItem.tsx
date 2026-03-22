@@ -2,6 +2,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useMemo, type ReactNode } from 'react';
 import { Fonts, type ThemeColors } from '../constants/theme';
+import { Spacing, FontSize } from '../constants/tokens';
 import { useTheme } from '../hooks/useTheme';
 
 interface MenuItemProps {
@@ -44,9 +45,9 @@ const makeStyles = (colors: ThemeColors) =>
     row: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingVertical: 14,
-      paddingHorizontal: 16,
-      gap: 12,
+      paddingVertical: Spacing['2xl'],
+      paddingHorizontal: Spacing['3xl'],
+      gap: Spacing.xl,
     },
     iconWrap: {
       alignItems: 'center',
@@ -55,7 +56,7 @@ const makeStyles = (colors: ThemeColors) =>
     label: {
       flex: 1,
       fontFamily: Fonts.manrope.semiBold,
-      fontSize: 15,
+      fontSize: FontSize.lg,
       color: colors.textWhite,
       textAlign: 'right',
     },

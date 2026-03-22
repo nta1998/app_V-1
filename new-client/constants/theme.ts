@@ -17,7 +17,11 @@ export const DarkColors = {
   primaryGlow: '#c8a45559',
   borderGold: '#c8a4554D',
   success: '#34d399',
+  warning: '#fbbf24',
+  amber: '#f59e0b',
   error: '#ef4444',
+  overlay: '#00000099',
+  overlayLight: '#00000040',
 } as const;
 
 export const LightColors = {
@@ -39,7 +43,11 @@ export const LightColors = {
   primaryGlow: '#c8a45559',
   borderGold: '#c8a4554D',
   success: '#34d399',
+  warning: '#fbbf24',
+  amber: '#f59e0b',
   error: '#ef4444',
+  overlay: '#00000066',
+  overlayLight: '#00000026',
 } as const;
 
 export type ThemeColors = {

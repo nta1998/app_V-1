@@ -10,7 +10,7 @@ export default function AdminLayout() {
 
   useEffect(() => {
     if (state.status === 'authenticated' && !state.user.is_staff) {
-      router.replace('/(tabs)/' as never);
+      router.replace('/' as never);
     }
   }, [state]);
 
