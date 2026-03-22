@@ -66,41 +66,37 @@ class TestAdminDocumentUpload(BaseE2ETestCase):
     # GAP: No API endpoint for DealDocument CRUD
     # -----------------------------------------------------------
 
-    def test_no_deal_document_api_endpoint_GAP(self):
-        """
-        [GAP] There is no registered API endpoint for DealDocument.
-        EXPECTED BEHAVIOR: POST /api/deal-documents/ should allow admin
-                          to upload files with multipart form data.
-        CURRENT BEHAVIOR:  The URL does not exist (404).
+    def test_deal_document_api_endpoint_exists(self):
+        """The /api/deal-documents/ endpoint exists and supports POST to create a document."""
+        from django.core.files.uploadedfile import SimpleUploadedFile
 
-        The DealDocumentSerializer exists but no ViewSet is registered
-        in core/urls.py.
-        """
-        response = self.admin_client.get('/api/deal-documents/')
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        pdf_file = SimpleUploadedFile(
+            'contract_v2.pdf',
+            b'%PDF-1.4 test content',
+            content_type='application/pdf',
+        )
+        response = self.admin_client.post('/api/deal-documents/', {
+            'deal': self.deal.id,
+            'filename': 'contract_v2.pdf',
+            'file': pdf_file,
+            'file_type': 'CONTRACT',
+        }, format='multipart')
+        self.assertIn(response.status_code, [
+            status.HTTP_200_OK,
+            status.HTTP_201_CREATED,
+        ])
 
     # -----------------------------------------------------------
     # GAP: progress endpoint is broken
     # -----------------------------------------------------------
 
-    def test_progress_action_field_mismatch_GAP(self):
-        """
-        [GAP] POST /api/deals/{id}/progress/ uses nonexistent model fields.
-        EXPECTED BEHAVIOR: Should update deal stage and create documents.
-        CURRENT BEHAVIOR:  Crashes with AttributeError because:
-          - Deal model has no 'current_stage' field (only 'status')
-          - DealDocument has no 'document_name', 'file_url', 'stage', 'status'
-            (it has 'filename', 'file', 'file_type')
-
-        The progress endpoint needs to be rewritten to match actual model fields.
-        """
+    def test_progress_endpoint_works(self):
+        """POST /api/deals/{id}/progress/ updates deal stage and status."""
         response = self.admin_client.post(
             f'/api/deals/{self.deal.id}/progress/',
-            {'current_stage': 'IN_PROGRESS', 'status': 'Active'},
+            {'current_stage': 'CONTRACT', 'status': 'Active'},
             format='json',
         )
-        # This should fail with 500 because deal.current_stage doesn't exist
-        self.assertIn(response.status_code, [
-            status.HTTP_500_INTERNAL_SERVER_ERROR,
-            status.HTTP_400_BAD_REQUEST,
-        ])
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.deal.refresh_from_db()
+        self.assertEqual(self.deal.stage, 'CONTRACT')

@@ -26,16 +26,8 @@ class TestUserDocumentSigning(BaseE2ETestCase):
     # GAP: No API endpoint for user to upload signed document
     # -----------------------------------------------------------
 
-    def test_no_upload_endpoint_for_user_GAP(self):
-        """
-        [GAP] There is no endpoint allowing a user to upload a signed document.
-        EXPECTED BEHAVIOR: User should be able to POST a signed file to an
-                          endpoint like /api/deal-documents/ with their deal ID.
-        CURRENT BEHAVIOR:  /api/deal-documents/ does not exist (404).
-
-        The DealDocument model supports this (has user FK and file FileField),
-        but no ViewSet is registered.
-        """
+    def test_upload_endpoint_for_user_works(self):
+        """User can upload a signed document via /api/deal-documents/."""
         signed_file = SimpleUploadedFile(
             'contract_signed.pdf',
             b'%PDF-1.4 signed content',
@@ -47,7 +39,10 @@ class TestUserDocumentSigning(BaseE2ETestCase):
             'file': signed_file,
             'file_type': 'CONTRACT',
         }, format='multipart')
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertIn(response.status_code, [
+            status.HTTP_200_OK,
+            status.HTTP_201_CREATED,
+        ])
 
     # -----------------------------------------------------------
     # Model-level proof: signing WORKS at the ORM level

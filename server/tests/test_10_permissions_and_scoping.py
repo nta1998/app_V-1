@@ -122,7 +122,7 @@ class TestAdminOnlyActions(BaseE2ETestCase):
         deal = self.create_deal()
         response = self.user_client.post('/api/deal-transactions/', {
             'deal_id': deal.id,
-            'stage': 'IN_PROGRESS',
+            'stage': 'CONTRACT',
             'status': 'WAITING_CLIENT',
         })
         # Currently succeeds -- GAP

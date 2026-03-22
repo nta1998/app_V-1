@@ -68,7 +68,7 @@ class TestEndToEndInvestmentFlow(BaseE2ETestCase):
         # Admin creates initial transaction stage
         response = self.admin_client.post('/api/deal-transactions/', {
             'deal_id': deal_id,
-            'stage': 'INITIAL',
+            'stage': 'ATTACHMENT',
             'status': 'WAITING_CLIENT',
             'description': 'Waiting for contract review',
         })
@@ -174,7 +174,7 @@ class TestEndToEndInvestmentFlow(BaseE2ETestCase):
         # Create next stage transaction
         response = self.admin_client.post('/api/deal-transactions/', {
             'deal_id': deal_id,
-            'stage': 'IN_PROGRESS',
+            'stage': 'CONTRACT',
             'status': 'WAITING_APPROVAL',
             'description': 'Contract signed, awaiting legal approval',
         })
@@ -183,7 +183,7 @@ class TestEndToEndInvestmentFlow(BaseE2ETestCase):
         # Continue to completion
         response = self.admin_client.post('/api/deal-transactions/', {
             'deal_id': deal_id,
-            'stage': 'COMPLETED',
+            'stage': 'CLOSING',
             'status': 'DONE',
             'description': 'Deal fully completed',
         })
@@ -203,7 +203,7 @@ class TestEndToEndInvestmentFlow(BaseE2ETestCase):
         # FINAL VERIFICATION: Everything is consistent
         # ============================================================
         self.assertEqual(deal.documents.count(), 2)
-        self.assertEqual(deal.transactions.count(), 3)  # INITIAL + IN_PROGRESS + COMPLETED
+        self.assertEqual(deal.transactions.count(), 3)  # ATTACHMENT + CONTRACT + CLOSING
         self.assertEqual(Notifications.objects.filter(user=self.user).count(), 1)
         self.assertTrue(
             ActivityLog.objects.filter(deal=deal).count() >= 5
